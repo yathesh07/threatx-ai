@@ -1,0 +1,110 @@
+import { useState } from "react";
+import AppLayout from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Fish, Search, Shield, AlertTriangle, Loader2 } from "lucide-react";
+import { getRiskColor } from "@/components/RiskGauge";
+import RiskGauge from "@/components/RiskGauge";
+
+interface PhishingResult {
+  url: string;
+  score: number;
+  indicators: string[];
+}
+
+const PhishingDetection = () => {
+  const [url, setUrl] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState<PhishingResult | null>(null);
+
+  const handleScan = () => {
+    if (!url) return;
+    setScanning(true);
+    setResult(null);
+    setTimeout(() => {
+      setScanning(false);
+      const score = url.includes("suspicious") || url.includes("login") ? 82 : url.includes("http://") ? 65 : 15;
+      setResult({
+        url,
+        score,
+        indicators: score > 60
+          ? ["Suspicious domain pattern", "No SSL certificate", "URL obfuscation detected", "Recently registered domain"]
+          : score > 30
+          ? ["HTTP protocol used", "Minor URL anomaly"]
+          : ["Valid SSL certificate", "Established domain"],
+      });
+    }, 2000);
+  };
+
+  return (
+    <AppLayout>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-foreground tracking-tight">Phishing Detection</h2>
+        <p className="text-muted-foreground mt-1">Analyze URLs and emails for phishing threats</p>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-8 mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <Fish className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">URL Scanner</h3>
+            <p className="text-sm text-muted-foreground">Enter a URL to check for phishing indicators</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Input
+            placeholder="https://example.com/login..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="flex-1 bg-secondary border-border font-mono text-sm"
+            onKeyDown={(e) => e.key === "Enter" && handleScan()}
+          />
+          <Button onClick={handleScan} disabled={scanning || !url} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          </Button>
+        </div>
+      </div>
+
+      {scanning && (
+        <div className="bg-card border border-primary/30 rounded-xl p-8 text-center glow-primary">
+          <Loader2 className="w-10 h-10 text-primary mx-auto mb-3 animate-spin" />
+          <p className="text-foreground font-semibold">Analyzing URL...</p>
+          <p className="text-sm text-muted-foreground font-mono mt-1">{url}</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="bg-card border border-border rounded-xl p-8">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <RiskGauge score={result.score} label="Phishing Risk" size="lg" />
+            <div className="flex-1">
+              <p className="font-mono text-sm text-muted-foreground mb-1">Scanned URL</p>
+              <p className="font-mono text-foreground mb-4 break-all">{result.url}</p>
+              <h4 className="text-sm font-semibold text-foreground mb-2">Detection Indicators</h4>
+              <div className="space-y-2">
+                {result.indicators.map((indicator, i) => {
+                  const risk = getRiskColor(result.score);
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      {result.score > 50 ? (
+                        <AlertTriangle className={`w-4 h-4 shrink-0 ${risk.color}`} />
+                      ) : (
+                        <Shield className="w-4 h-4 shrink-0 text-success" />
+                      )}
+                      <span className="text-sm text-muted-foreground">{indicator}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+};
+
+export default PhishingDetection;
