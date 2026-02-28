@@ -1,5 +1,6 @@
 import AppLayout from "@/components/AppLayout";
 import RiskGauge from "@/components/RiskGauge";
+import ExportButton from "@/components/ExportReport";
 import { Activity, Wifi, Globe, Server } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -74,9 +75,16 @@ const NetworkAnomaly = () => {
 
       {/* Connections Table */}
       <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Server className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">Active Connections</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Server className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Active Connections</h3>
+          </div>
+          <ExportButton data={{
+            title: "Network_Connections_Report",
+            generatedAt: new Date().toISOString(),
+            rows: connections.map(c => ({ ip: c.ip, port: c.port, status: c.status, packets: c.packets, risk: c.risk })),
+          }} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

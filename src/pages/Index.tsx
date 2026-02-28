@@ -3,6 +3,8 @@ import RiskGauge from "@/components/RiskGauge";
 import ThreatFeed from "@/components/ThreatFeed";
 import ThreatChart from "@/components/ThreatChart";
 import StatCard from "@/components/StatCard";
+import OverallRiskScanner from "@/components/OverallRiskScanner";
+import RealTimeAlerts from "@/components/RealTimeAlerts";
 import { Shield, Bug, Fish, Activity, AlertTriangle, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
@@ -36,11 +38,18 @@ const Dashboard = () => {
         <StatCard icon={Fish} label="Phishing Attempts" value={8} change="+2" changeType="negative" />
       </div>
 
+      {/* Overall Risk Scanner */}
+      <div className="mb-6">
+        <OverallRiskScanner />
+      </div>
+
       {/* Chart + Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ThreatChart />
         <ThreatFeed />
       </div>
+
+      <RealTimeAlerts />
     </AppLayout>
   );
 };
