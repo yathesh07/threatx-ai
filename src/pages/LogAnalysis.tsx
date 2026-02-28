@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, Loader2, AlertTriangle, Info } from "lucide-react";
 import { getRiskColor } from "@/components/RiskGauge";
 import RiskGauge from "@/components/RiskGauge";
+import ExportButton from "@/components/ExportReport";
+import { toast } from "@/hooks/use-toast";
 
 interface LogEntry {
   line: number;
@@ -32,6 +34,11 @@ const LogAnalysis = () => {
     setTimeout(() => {
       setAnalyzing(false);
       setResults(mockLogResults);
+      toast({
+        variant: "destructive",
+        title: "Log Analysis Complete",
+        description: `${mockLogResults.length} suspicious entries found`,
+      });
     }, 2500);
   };
 
@@ -104,7 +111,14 @@ const LogAnalysis = () => {
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Flagged Log Entries</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Flagged Log Entries</h3>
+              <ExportButton data={{
+                title: "Log_Analysis_Report",
+                generatedAt: new Date().toISOString(),
+                rows: results.map(r => ({ line: r.line, content: r.content, severity: r.severity, category: r.category })),
+              }} />
+            </div>
             <div className="space-y-3">
               {results.map((entry, i) => {
                 const risk = getRiskColor(entry.severity);
