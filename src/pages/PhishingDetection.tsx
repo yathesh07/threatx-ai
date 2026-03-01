@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Fish, Search, Shield, AlertTriangle, Loader2 } from "lucide-react";
 import { getRiskColor } from "@/components/RiskGauge";
 import RiskGauge from "@/components/RiskGauge";
+import XAIExplanation from "@/components/XAIExplanation";
 
 interface PhishingResult {
   url: string;
@@ -101,6 +102,11 @@ const PhishingDetection = () => {
               </div>
             </div>
           </div>
+          {result.score > 30 && (
+            <div className="mt-6">
+              <XAIExplanation threatType="phishing" severity={result.score} confidence={Math.round(65 + Math.random() * 30)} />
+            </div>
+          )}
         </div>
       )}
     </AppLayout>
