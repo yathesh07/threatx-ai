@@ -5,6 +5,9 @@ import ThreatChart from "@/components/ThreatChart";
 import StatCard from "@/components/StatCard";
 import OverallRiskScanner from "@/components/OverallRiskScanner";
 import RealTimeAlerts from "@/components/RealTimeAlerts";
+import PredictiveEngine from "@/components/PredictiveEngine";
+import PersonalizedRisk from "@/components/PersonalizedRisk";
+import SmartRecommendations from "@/components/SmartRecommendations";
 import { Shield, Bug, Fish, Activity, AlertTriangle, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
@@ -12,7 +15,7 @@ const Dashboard = () => {
     <AppLayout>
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-foreground tracking-tight">Security Dashboard</h2>
-        <p className="text-muted-foreground mt-1">Real-time threat monitoring and risk assessment</p>
+        <p className="text-muted-foreground mt-1">Real-time threat monitoring, prediction & risk assessment</p>
       </div>
 
       {/* Overall Risk Score */}
@@ -38,9 +41,24 @@ const Dashboard = () => {
         <StatCard icon={Fish} label="Phishing Attempts" value={8} change="+2" changeType="negative" />
       </div>
 
+      {/* Predictive Engine */}
+      <div className="mb-6">
+        <PredictiveEngine />
+      </div>
+
+      {/* Personalized Risk */}
+      <div className="mb-6">
+        <PersonalizedRisk />
+      </div>
+
       {/* Overall Risk Scanner */}
       <div className="mb-6">
         <OverallRiskScanner />
+      </div>
+
+      {/* Smart Recommendations */}
+      <div className="mb-6">
+        <SmartRecommendations riskLevel={62} threatTypes={["malware", "phishing"]} />
       </div>
 
       {/* Chart + Feed */}

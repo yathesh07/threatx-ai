@@ -1,5 +1,6 @@
-import { Shield, Activity, Bug, Fish, FileText, BarChart3 } from "lucide-react";
+import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, Brain, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { icon: BarChart3, label: "Dashboard", path: "/" },
@@ -11,6 +12,7 @@ const navItems = [
 
 const AppSidebar = () => {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50">
@@ -46,7 +48,16 @@ const AppSidebar = () => {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-3">
+        {profile && (
+          <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground font-medium truncate">{profile.display_name || profile.username}</p>
+              <p className="text-xs text-muted-foreground font-mono">Risk: {profile.risk_baseline ?? 50}</p>
+            </div>
+          </div>
+        )}
         <div className="bg-secondary rounded-lg p-3">
           <p className="text-xs text-muted-foreground font-mono">System Status</p>
           <div className="flex items-center gap-2 mt-1">
@@ -54,6 +65,13 @@ const AppSidebar = () => {
             <span className="text-sm text-success font-medium">All Systems Online</span>
           </div>
         </div>
+        <button
+          onClick={signOut}
+          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </button>
       </div>
     </aside>
   );
