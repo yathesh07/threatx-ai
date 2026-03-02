@@ -3,7 +3,7 @@ import RiskGauge from "@/components/RiskGauge";
 import ThreatFeed from "@/components/ThreatFeed";
 import ThreatChart from "@/components/ThreatChart";
 import StatCard from "@/components/StatCard";
-import OverallRiskScanner from "@/components/OverallRiskScanner";
+
 import RealTimeAlerts from "@/components/RealTimeAlerts";
 import PredictiveEngine from "@/components/PredictiveEngine";
 import PersonalizedRisk from "@/components/PersonalizedRisk";
@@ -49,11 +49,6 @@ const Dashboard = () => {
       {/* Personalized Risk */}
       <div className="mb-6">
         <PersonalizedRisk />
-      </div>
-
-      {/* Overall Risk Scanner */}
-      <div className="mb-6">
-        <OverallRiskScanner />
       </div>
 
       {/* Smart Recommendations */}
