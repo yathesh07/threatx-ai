@@ -8,6 +8,7 @@ import RealTimeAlerts from "@/components/RealTimeAlerts";
 import PredictiveEngine from "@/components/PredictiveEngine";
 import PersonalizedRisk from "@/components/PersonalizedRisk";
 import SmartRecommendations from "@/components/SmartRecommendations";
+import FalseAlertFilter from "@/components/FalseAlertFilter";
 import { Shield, Bug, Fish, Activity, AlertTriangle, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
@@ -39,6 +40,11 @@ const Dashboard = () => {
         <StatCard icon={CheckCircle} label="Threats Blocked" value={1847} change="+12%" changeType="positive" />
         <StatCard icon={Bug} label="Malware Detected" value={12} change="-3" changeType="positive" />
         <StatCard icon={Fish} label="Phishing Attempts" value={8} change="+2" changeType="negative" />
+      </div>
+
+      {/* False Alert Filtering Engine */}
+      <div className="mb-6">
+        <FalseAlertFilter />
       </div>
 
       {/* Predictive Engine */}

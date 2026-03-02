@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertTriangle, Shield, Lightbulb, CheckCircle } from "lucide-react";
+import { AlertTriangle, Shield, Lightbulb, CheckCircle, TrendingUp } from "lucide-react";
 
 interface AlertData {
   type: string;
@@ -52,8 +52,9 @@ const alertMessages: AlertData[] = [
 const RealTimeAlerts = () => {
   const indexRef = useRef(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertData | null>(null);
+  const prevRiskRef = useRef(50);
 
-  const showAlert = (alert: AlertData) => {
+  const showAlert = useCallback((alert: AlertData) => {
     toast({
       variant: alert.severity >= 80 ? "destructive" : "default",
       title: `⚠ ${alert.type} Alert — Risk: ${alert.severity}`,
@@ -69,7 +70,50 @@ const RealTimeAlerts = () => {
         </div>
       ),
     });
-  };
+  }, []);
+
+  // Real-time risk monitoring — detect spikes and alert with solutions
+  useEffect(() => {
+    const riskMonitor = setInterval(() => {
+      const simulatedRisk = Math.round(30 + Math.random() * 65);
+      const prev = prevRiskRef.current;
+      const delta = simulatedRisk - prev;
+      prevRiskRef.current = simulatedRisk;
+
+      if (delta >= 15 && simulatedRisk >= 60) {
+        const riskAlert: AlertData = {
+          type: "Risk Spike",
+          message: `Risk probability increased by +${delta} points to ${simulatedRisk}%. Immediate attention required.`,
+          severity: simulatedRisk,
+          steps: [
+            "Review the dashboard for new threat detections",
+            "Check all active scan modules for recent findings",
+            "Verify firewall and IDS rules are up to date",
+            "Consider running a full system scan",
+            "Monitor network traffic for unusual patterns",
+          ],
+          beginnerTip: `Your overall risk score jumped from ${prev} to ${simulatedRisk}. This means the system detected more suspicious activity than usual. Follow the steps below to investigate and stay safe.`,
+        };
+        toast({
+          variant: "destructive",
+          title: `🔺 Risk Spike Detected — ${prev} → ${simulatedRisk}`,
+          description: (
+            <div>
+              <p>Risk probability increased by +{delta} points!</p>
+              <button
+                onClick={() => setSelectedAlert(riskAlert)}
+                className="mt-2 text-xs underline opacity-80 hover:opacity-100"
+              >
+                Click for recommended actions →
+              </button>
+            </div>
+          ),
+        });
+      }
+    }, 10000);
+
+    return () => clearInterval(riskMonitor);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -87,7 +131,7 @@ const RealTimeAlerts = () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, []);
+  }, [showAlert]);
 
   return (
     <>
@@ -96,7 +140,11 @@ const RealTimeAlerts = () => {
           <DialogContent className="bg-card border-border max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
-                <AlertTriangle className="w-5 h-5 text-warning" />
+                {selectedAlert.type === "Risk Spike" ? (
+                  <TrendingUp className="w-5 h-5 text-destructive" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-warning" />
+                )}
                 {selectedAlert.type} Alert — How to Fix
               </DialogTitle>
               <DialogDescription className="text-muted-foreground">
@@ -105,7 +153,6 @@ const RealTimeAlerts = () => {
             </DialogHeader>
 
             <div className="space-y-4 mt-2">
-              {/* Beginner Tip */}
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Shield className="w-4 h-4 text-primary" />
@@ -114,7 +161,6 @@ const RealTimeAlerts = () => {
                 <p className="text-sm text-muted-foreground">{selectedAlert.beginnerTip}</p>
               </div>
 
-              {/* Steps */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Lightbulb className="w-4 h-4 text-success" />
