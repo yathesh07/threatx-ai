@@ -1,4 +1,4 @@
-import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, Brain, User } from "lucide-react";
+import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, Brain, User, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -8,6 +8,7 @@ const navItems = [
   { icon: Fish, label: "Phishing Detection", path: "/phishing" },
   { icon: Activity, label: "Network Anomaly", path: "/network" },
   { icon: FileText, label: "Log Analysis", path: "/logs" },
+  { icon: ClipboardList, label: "Threat Logs", path: "/threat-logs" },
 ];
 
 const AppSidebar = () => {

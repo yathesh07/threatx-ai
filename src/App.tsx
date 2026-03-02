@@ -10,6 +10,7 @@ import MalwareScan from "./pages/MalwareScan";
 import PhishingDetection from "./pages/PhishingDetection";
 import NetworkAnomaly from "./pages/NetworkAnomaly";
 import LogAnalysis from "./pages/LogAnalysis";
+import ThreatLogs from "./pages/ThreatLogs";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/phishing" element={<ProtectedRoute><PhishingDetection /></ProtectedRoute>} />
             <Route path="/network" element={<ProtectedRoute><NetworkAnomaly /></ProtectedRoute>} />
             <Route path="/logs" element={<ProtectedRoute><LogAnalysis /></ProtectedRoute>} />
+            <Route path="/threat-logs" element={<ProtectedRoute><ThreatLogs /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
