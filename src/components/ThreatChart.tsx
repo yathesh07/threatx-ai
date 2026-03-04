@@ -1,18 +1,25 @@
+import { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const data = [
-  { time: "00:00", threats: 12, blocked: 10 },
-  { time: "04:00", threats: 8, blocked: 8 },
-  { time: "08:00", threats: 25, blocked: 22 },
-  { time: "12:00", threats: 45, blocked: 40 },
-  { time: "16:00", threats: 32, blocked: 30 },
-  { time: "20:00", threats: 18, blocked: 16 },
-  { time: "Now", threats: 22, blocked: 20 },
-];
+const generateData = () => {
+  const times = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"];
+  return times.map((time) => ({
+    time,
+    threats: Math.round(5 + Math.random() * 45),
+    blocked: Math.round(3 + Math.random() * 40),
+  }));
+};
 
 const ThreatChart = () => {
+  const [data, setData] = useState(generateData);
+
+  useEffect(() => {
+    const interval = setInterval(() => setData(generateData()), 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="bg-card border border-border rounded-xl p-6">
+    <div className="bg-card border border-border rounded-xl p-4 md:p-6">
       <h3 className="text-lg font-semibold text-foreground mb-4">Threat Activity (24h)</h3>
       <ResponsiveContainer width="100%" height={250}>
         <AreaChart data={data}>
@@ -29,15 +36,7 @@ const ThreatChart = () => {
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 18%)" />
           <XAxis dataKey="time" stroke="hsl(215, 15%, 50%)" fontSize={12} fontFamily="JetBrains Mono" />
           <YAxis stroke="hsl(215, 15%, 50%)" fontSize={12} fontFamily="JetBrains Mono" />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(220, 18%, 10%)",
-              border: "1px solid hsl(220, 15%, 18%)",
-              borderRadius: "8px",
-              fontFamily: "JetBrains Mono",
-              fontSize: "12px",
-            }}
-          />
+          <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 15%, 18%)", borderRadius: "8px", fontFamily: "JetBrains Mono", fontSize: "12px" }} />
           <Area type="monotone" dataKey="threats" stroke="hsl(0, 72%, 55%)" fill="url(#threatGradient)" strokeWidth={2} />
           <Area type="monotone" dataKey="blocked" stroke="hsl(175, 80%, 50%)" fill="url(#blockedGradient)" strokeWidth={2} />
         </AreaChart>

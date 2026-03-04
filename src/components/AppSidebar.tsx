@@ -1,6 +1,7 @@
-import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, Brain, User, ClipboardList, Zap } from "lucide-react";
+import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, User, ClipboardList, Zap, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { icon: BarChart3, label: "Dashboard", path: "/" },
@@ -12,14 +13,24 @@ const navItems = [
   { icon: Zap, label: "Incident Response", path: "/incidents" },
 ];
 
-const AppSidebar = () => {
+interface AppSidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
   const location = useLocation();
   const { profile, signOut } = useAuth();
+  const isMobile = useIsMobile();
+
+  const sidebarClass = isMobile
+    ? `fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50 transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`
+    : "fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50";
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50">
-      <div className="p-6 border-b border-border">
-        <Link to="/" className="flex items-center gap-3">
+    <aside className={sidebarClass}>
+      <div className="p-6 border-b border-border flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-3" onClick={onClose}>
           <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center glow-primary">
             <Shield className="w-5 h-5 text-primary" />
           </div>
@@ -28,15 +39,21 @@ const AppSidebar = () => {
             <p className="text-xs text-muted-foreground font-mono">v2.0 • ACTIVE</p>
           </div>
         </Link>
+        {isMobile && (
+          <button onClick={onClose} className="p-1.5 hover:bg-secondary rounded-lg">
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? "bg-primary/10 text-primary border border-primary/20 glow-primary"
