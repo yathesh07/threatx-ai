@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Filter, Eye, EyeOff, ThumbsUp, ThumbsDown, AlertTriangle, Shield, CheckCircle, TrendingDown, BarChart3, Brain } from "lucide-react";
+import { Filter, Eye, EyeOff, ThumbsUp, ThumbsDown, AlertTriangle, Shield, CheckCircle, TrendingDown, BarChart3, Brain, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,6 +15,7 @@ export interface FilteredAlert {
   features: { name: string; score: number }[];
   userFeedback?: "real" | "false_alarm";
   solution: string;
+  solutionSteps: string[];
 }
 
 const classifyAlert = (confidence: number, fpScore: number): FilteredAlert["classification"] => {
@@ -25,30 +26,26 @@ const classifyAlert = (confidence: number, fpScore: number): FilteredAlert["clas
 
 const computeFPScore = (alert: Omit<FilteredAlert, "falsePositiveScore" | "classification">): number => {
   let score = 0;
-  // Low confidence → likely false positive
   if (alert.confidence < 50) score += 30;
   else if (alert.confidence < 70) score += 15;
-  // Low severity → more likely false
   if (alert.severity < 40) score += 25;
   else if (alert.severity < 60) score += 10;
-  // Feature-based scoring
   const avgFeature = alert.features.reduce((s, f) => s + f.score, 0) / (alert.features.length || 1);
   if (avgFeature < 0.4) score += 20;
-  // Previously marked false → boost
   if (alert.userFeedback === "false_alarm") score += 30;
   return Math.min(100, score);
 };
 
 const generateAlerts = (): FilteredAlert[] => {
   const raw = [
-    { id: "fa-1", type: "Malware", description: "Trojan.GenericKD detected on endpoint-07", severity: 92, confidence: 89, features: [{ name: "File entropy", score: 0.91 }, { name: "API calls", score: 0.85 }, { name: "Signature match", score: 0.78 }], solution: "Isolate the endpoint immediately. Run a full offline antivirus scan. Re-image if the threat persists." },
-    { id: "fa-2", type: "Phishing", description: "Suspicious login page at secure-update.xyz", severity: 78, confidence: 82, features: [{ name: "Domain age", score: 0.95 }, { name: "SSL cert", score: 0.2 }, { name: "URL pattern", score: 0.73 }], solution: "Block this domain across your network. Force password resets for users who visited. Enable MFA." },
-    { id: "fa-3", type: "Network", description: "Outbound connection to unusual port 4444", severity: 35, confidence: 28, features: [{ name: "Port reputation", score: 0.3 }, { name: "Traffic volume", score: 0.15 }, { name: "Destination IP", score: 0.22 }], solution: "Monitor the connection for 24 hours. Likely a legitimate development tool. Verify with the endpoint user." },
-    { id: "fa-4", type: "Log Anomaly", description: "Failed login from internal IP 10.0.0.45", severity: 25, confidence: 18, features: [{ name: "IP reputation", score: 0.1 }, { name: "Login pattern", score: 0.2 }, { name: "Time anomaly", score: 0.15 }], solution: "No action needed. This appears to be a normal password typo from a known internal user." },
-    { id: "fa-5", type: "Malware", description: "Macro.Downloader found in document.xlsm", severity: 55, confidence: 52, features: [{ name: "Macro complexity", score: 0.6 }, { name: "File origin", score: 0.45 }, { name: "Obfuscation", score: 0.38 }], solution: "Quarantine the file. Verify with the sender. Update macro security policies to block by default." },
-    { id: "fa-6", type: "Network", description: "DNS query to known C2 domain detected", severity: 95, confidence: 94, features: [{ name: "Domain reputation", score: 0.98 }, { name: "Query pattern", score: 0.88 }, { name: "Threat intel match", score: 0.95 }], solution: "Block the domain immediately. Identify the source machine. Run full malware scan. Check for data exfiltration." },
-    { id: "fa-7", type: "Phishing", description: "URL with Base64 encoded parameters", severity: 30, confidence: 22, features: [{ name: "URL encoding", score: 0.35 }, { name: "Domain age", score: 0.1 }, { name: "SSL valid", score: 0.05 }], solution: "Likely a legitimate application using encoded parameters. No action required unless other indicators appear." },
-    { id: "fa-8", type: "Log Anomaly", description: "Root access at 2:30 AM from admin console", severity: 68, confidence: 61, features: [{ name: "Time anomaly", score: 0.7 }, { name: "User pattern", score: 0.55 }, { name: "Access location", score: 0.5 }], solution: "Verify with the admin team. If unauthorized, revoke access and audit recent changes. Enable after-hours alerts." },
+    { id: "fa-1", type: "Malware", description: "Trojan.GenericKD detected on endpoint-07", severity: 92, confidence: 89, features: [{ name: "File entropy", score: 0.91 }, { name: "API calls", score: 0.85 }, { name: "Signature match", score: 0.78 }], solution: "Isolate the endpoint immediately. Run a full offline antivirus scan. Re-image if the threat persists.", solutionSteps: ["Disconnect endpoint-07 from the network immediately", "Boot the system in Safe Mode", "Run a full antivirus scan with updated definitions", "Check for persistence mechanisms (registry, startup)", "If malware persists, back up clean data and re-image the system", "Update all security patches before reconnecting"] },
+    { id: "fa-2", type: "Phishing", description: "Suspicious login page at secure-update.xyz", severity: 78, confidence: 82, features: [{ name: "Domain age", score: 0.95 }, { name: "SSL cert", score: 0.2 }, { name: "URL pattern", score: 0.73 }], solution: "Block this domain across your network. Force password resets for users who visited. Enable MFA.", solutionSteps: ["Block secure-update.xyz at your DNS/firewall level", "Check web proxy logs for users who visited this URL", "Force password reset for all affected users", "Enable MFA on all user accounts if not already active", "Report the domain to your threat intelligence provider", "Send a company-wide phishing awareness alert"] },
+    { id: "fa-3", type: "Network", description: "Outbound connection to unusual port 4444", severity: 35, confidence: 28, features: [{ name: "Port reputation", score: 0.3 }, { name: "Traffic volume", score: 0.15 }, { name: "Destination IP", score: 0.22 }], solution: "Monitor the connection for 24 hours. Likely a legitimate development tool. Verify with the endpoint user.", solutionSteps: ["Monitor traffic on port 4444 for the next 24 hours", "Contact the endpoint user to verify if this is expected", "Check if any development tools use this port", "If unverified, block port 4444 outbound at the firewall"] },
+    { id: "fa-4", type: "Log Anomaly", description: "Failed login from internal IP 10.0.0.45", severity: 25, confidence: 18, features: [{ name: "IP reputation", score: 0.1 }, { name: "Login pattern", score: 0.2 }, { name: "Time anomaly", score: 0.15 }], solution: "No action needed. This appears to be a normal password typo from a known internal user.", solutionSteps: ["Verify the user at IP 10.0.0.45 is a known employee", "Check if the login attempt was during normal hours", "No further action required if verified"] },
+    { id: "fa-5", type: "Malware", description: "Macro.Downloader found in document.xlsm", severity: 55, confidence: 52, features: [{ name: "Macro complexity", score: 0.6 }, { name: "File origin", score: 0.45 }, { name: "Obfuscation", score: 0.38 }], solution: "Quarantine the file. Verify with the sender. Update macro security policies to block by default.", solutionSteps: ["Quarantine document.xlsm immediately", "Contact the sender to verify if the file is legitimate", "Scan the file in a sandboxed environment", "Update Group Policy to block macros from untrusted sources", "Review and tighten email attachment filtering rules"] },
+    { id: "fa-6", type: "Network", description: "DNS query to known C2 domain detected", severity: 95, confidence: 94, features: [{ name: "Domain reputation", score: 0.98 }, { name: "Query pattern", score: 0.88 }, { name: "Threat intel match", score: 0.95 }], solution: "Block the domain immediately. Identify the source machine. Run full malware scan. Check for data exfiltration.", solutionSteps: ["Block the C2 domain at DNS and firewall immediately", "Identify which machine made the DNS query from logs", "Isolate the affected machine from the network", "Run a full malware scan on the isolated system", "Check network logs for any data exfiltration to the C2", "Perform forensic analysis to determine initial infection vector", "Report the incident to your security team"] },
+    { id: "fa-7", type: "Phishing", description: "URL with Base64 encoded parameters", severity: 30, confidence: 22, features: [{ name: "URL encoding", score: 0.35 }, { name: "Domain age", score: 0.1 }, { name: "SSL valid", score: 0.05 }], solution: "Likely a legitimate application using encoded parameters. No action required unless other indicators appear.", solutionSteps: ["Decode the Base64 parameters to check contents", "Verify the domain is a known legitimate service", "No further action unless additional indicators emerge"] },
+    { id: "fa-8", type: "Log Anomaly", description: "Root access at 2:30 AM from admin console", severity: 68, confidence: 61, features: [{ name: "Time anomaly", score: 0.7 }, { name: "User pattern", score: 0.55 }, { name: "Access location", score: 0.5 }], solution: "Verify with the admin team. If unauthorized, revoke access and audit recent changes. Enable after-hours alerts.", solutionSteps: ["Contact the admin team to verify this access was authorized", "Review all changes made during this session", "If unauthorized, immediately revoke access and change credentials", "Enable alerts for after-hours admin access", "Audit recent system changes for unauthorized modifications"] },
   ];
 
   return raw.map((a) => {
@@ -108,13 +105,13 @@ const FalseAlertFilter = () => {
     : alerts.filter((a) => a.classification !== "likely_false_positive");
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold text-foreground">Intelligent Alert Filter</h3>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {suppressedCount > 0 && (
             <span className="text-xs font-mono bg-success/10 text-success px-2 py-1 rounded-full border border-success/20">
               <TrendingDown className="w-3 h-3 inline mr-1" />
@@ -158,7 +155,7 @@ const FalseAlertFilter = () => {
             <div key={alert.id} className={`border rounded-lg overflow-hidden ${cls.border}`}>
               <button
                 onClick={() => setExpandedId(isExpanded ? null : alert.id)}
-                className={`w-full flex items-center gap-3 p-3 text-left hover:bg-secondary/30 transition-colors`}
+                className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary/30 transition-colors"
               >
                 <cls.icon className={`w-4 h-4 shrink-0 ${cls.text}`} />
                 <div className="flex-1 min-w-0">
@@ -175,16 +172,17 @@ const FalseAlertFilter = () => {
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{alert.description}</p>
                 </div>
-                <div className="text-right shrink-0 space-y-0.5">
+                <div className="text-right shrink-0 space-y-0.5 hidden sm:block">
                   <div className="text-xs font-mono text-muted-foreground">Conf: <span className="text-foreground font-bold">{alert.confidence}%</span></div>
                   <div className="text-xs font-mono text-muted-foreground">FP: <span className={alert.falsePositiveScore > 50 ? "text-success font-bold" : "text-destructive font-bold"}>{alert.falsePositiveScore}%</span></div>
                 </div>
+                {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
               </button>
 
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                   {/* Confidence & FP visual */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Threat Confidence</p>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -232,16 +230,38 @@ const FalseAlertFilter = () => {
                     <p className="text-sm text-muted-foreground">{alert.solution}</p>
                   </div>
 
+                  {/* Step-by-step solutions for confirmed threats */}
+                  {alert.classification === "confirmed" && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="w-4 h-4 text-primary" />
+                        <p className="text-xs font-semibold text-foreground">Step-by-Step Remediation Guide</p>
+                      </div>
+                      <div className="space-y-2">
+                        {alert.solutionSteps.map((step, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="text-xs font-mono text-primary font-bold mt-0.5 shrink-0">
+                              {i + 1}.
+                            </span>
+                            <span className="text-sm text-muted-foreground">{step}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* User Feedback */}
                   {!alert.userFeedback && (
-                    <div className="flex items-center gap-3 pt-1">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
                       <p className="text-xs text-muted-foreground">Was this a real threat?</p>
-                      <Button size="sm" variant="outline" onClick={() => markFeedback(alert.id, "real")} className="text-xs h-7 border-destructive/30 text-destructive hover:bg-destructive/10">
-                        <ThumbsUp className="w-3 h-3 mr-1" /> Real Threat
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => markFeedback(alert.id, "false_alarm")} className="text-xs h-7 border-success/30 text-success hover:bg-success/10">
-                        <ThumbsDown className="w-3 h-3 mr-1" /> False Alarm
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => markFeedback(alert.id, "real")} className="text-xs h-7 border-destructive/30 text-destructive hover:bg-destructive/10">
+                          <ThumbsUp className="w-3 h-3 mr-1" /> Real Threat
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => markFeedback(alert.id, "false_alarm")} className="text-xs h-7 border-success/30 text-success hover:bg-success/10">
+                          <ThumbsDown className="w-3 h-3 mr-1" /> False Alarm
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
