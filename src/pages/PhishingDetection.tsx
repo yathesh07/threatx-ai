@@ -7,6 +7,9 @@ import { getRiskColor } from "@/components/RiskGauge";
 import RiskGauge from "@/components/RiskGauge";
 import XAIExplanation from "@/components/XAIExplanation";
 import AIThreatAnalysis from "@/components/AIThreatAnalysis";
+import ExportButton from "@/components/ExportReport";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PhishingResult {
   url: string;
@@ -19,6 +22,7 @@ const neutralIndicators = ["HTTP protocol used", "Minor URL anomaly", "Unusual q
 const safeIndicators = ["Valid SSL certificate", "Established domain", "Clean reputation", "Known safe domain"];
 
 const PhishingDetection = () => {
+  const { user } = useAuth();
   const [url, setUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<PhishingResult | null>(null);
@@ -27,9 +31,8 @@ const PhishingDetection = () => {
     if (!url) return;
     setScanning(true);
     setResult(null);
-    setTimeout(() => {
+    setTimeout(async () => {
       setScanning(false);
-      // Generate dynamic score based on URL characteristics + randomness
       let baseScore = Math.round(Math.random() * 30 + 10);
       if (url.includes("suspicious") || url.includes("login") || url.includes("secure")) baseScore += 40;
       if (url.includes("http://")) baseScore += 20;
@@ -43,6 +46,18 @@ const PhishingDetection = () => {
         : safeIndicators.sort(() => Math.random() - 0.5).slice(0, 2);
 
       setResult({ url, score, indicators });
+
+      // Persist
+      if (user) {
+        await supabase.from("scan_history").insert({
+          user_id: user.id,
+          scan_type: "phishing",
+          risk_score: score,
+          threat_count: score > 50 ? 1 : 0,
+          target: url,
+          results: { url, score, indicators } as any,
+        });
+      }
     }, 2000);
   };
 
@@ -89,6 +104,14 @@ const PhishingDetection = () => {
       {result && (
         <div className="space-y-4">
           <div className="bg-card border border-border rounded-xl p-4 md:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Scan Results</h3>
+              <ExportButton data={{
+                title: "Phishing_Scan_Report",
+                generatedAt: new Date().toISOString(),
+                rows: [{ url: result.url, score: result.score, indicators: result.indicators.join("; ") }],
+              }} />
+            </div>
             <div className="flex flex-col md:flex-row items-center gap-8">
               <RiskGauge score={result.score} label="Phishing Risk" size="lg" />
               <div className="flex-1">

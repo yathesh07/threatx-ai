@@ -6,42 +6,81 @@ import ThreatChart from "@/components/ThreatChart";
 import StatCard from "@/components/StatCard";
 import RealTimeAlerts from "@/components/RealTimeAlerts";
 import PredictiveEngine from "@/components/PredictiveEngine";
-import PersonalizedRisk from "@/components/PersonalizedRisk";
 import SmartRecommendations from "@/components/SmartRecommendations";
 import FalseAlertFilter from "@/components/FalseAlertFilter";
 import SecurityChatbot from "@/components/SecurityChatbot";
-import { Shield, Bug, Fish, Activity, AlertTriangle, CheckCircle, ScanLine, Loader2 } from "lucide-react";
+import { Shield, Bug, Fish, Activity, AlertTriangle, CheckCircle, ScanLine, Loader2, User, TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const Dashboard = () => {
-  const [scores, setScores] = useState({ overall: 62, malware: 85, phishing: 72, network: 45, logAnomaly: 28 });
+  const { user, profile } = useAuth();
+  const [scores, setScores] = useState({ overall: 0, malware: 0, phishing: 0, network: 0, logAnomaly: 0 });
   const [scanning, setScanning] = useState(false);
-  const [stats, setStats] = useState({ threats: 23, blocked: 1847, malware: 12, phishing: 8 });
+  const [hasScanned, setHasScanned] = useState(false);
+  const [stats, setStats] = useState({ threats: 0, blocked: 0, malware: 0, phishing: 0 });
+  const [riskHistory, setRiskHistory] = useState<{ date: string; score: number }[]>([]);
 
-  // Live-update scores every 8 seconds
+  // Load last scan from DB on mount
   useEffect(() => {
-    const interval = setInterval(() => {
-      setScores({
-        overall: Math.round(30 + Math.random() * 50),
-        malware: Math.round(40 + Math.random() * 50),
-        phishing: Math.round(30 + Math.random() * 50),
-        network: Math.round(15 + Math.random() * 55),
-        logAnomaly: Math.round(10 + Math.random() * 50),
-      });
-      setStats({
-        threats: Math.round(10 + Math.random() * 30),
-        blocked: Math.round(1500 + Math.random() * 500),
-        malware: Math.round(5 + Math.random() * 20),
-        phishing: Math.round(3 + Math.random() * 15),
-      });
-    }, 8000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!user) return;
+    const loadLastScan = async () => {
+      const { data } = await supabase
+        .from("risk_scores")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length > 0) {
+        const s = data[0];
+        setScores({
+          overall: Number(s.overall_score),
+          malware: Number(s.malware_score) || 0,
+          phishing: Number(s.phishing_score) || 0,
+          network: Number(s.network_score) || 0,
+          logAnomaly: Number(s.log_score) || 0,
+        });
+        setHasScanned(true);
+      }
+      // Load risk history
+      const { data: history } = await supabase
+        .from("risk_scores")
+        .select("created_at, overall_score")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(30);
+      if (history && history.length > 0) {
+        setRiskHistory(history.map(h => ({
+          date: new Date(h.created_at).toLocaleDateString([], { month: "short", day: "numeric" }),
+          score: Number(h.overall_score),
+        })));
+      }
+      // Load stats from scan_history
+      const { data: scans } = await supabase
+        .from("scan_history")
+        .select("scan_type, threat_count")
+        .eq("user_id", user.id);
+      if (scans && scans.length > 0) {
+        const malwareThreats = scans.filter(s => s.scan_type === "malware").reduce((a, b) => a + (b.threat_count || 0), 0);
+        const phishingThreats = scans.filter(s => s.scan_type === "phishing").reduce((a, b) => a + (b.threat_count || 0), 0);
+        const totalThreats = scans.reduce((a, b) => a + (b.threat_count || 0), 0);
+        setStats({
+          threats: totalThreats,
+          blocked: Math.round(totalThreats * 1.5 + scans.length * 50),
+          malware: malwareThreats,
+          phishing: phishingThreats,
+        });
+      }
+    };
+    loadLastScan();
+  }, [user]);
 
-  const handleFullScan = () => {
+  const handleFullScan = async () => {
     setScanning(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       const newScores = {
         overall: 0,
         malware: Math.round(Math.random() * 40 + 50),
@@ -51,7 +90,41 @@ const Dashboard = () => {
       };
       newScores.overall = Math.round((newScores.malware + newScores.phishing + newScores.network + newScores.logAnomaly) / 4);
       setScores(newScores);
+      setHasScanned(true);
       setScanning(false);
+
+      // Persist to database
+      if (user) {
+        await supabase.from("risk_scores").insert({
+          user_id: user.id,
+          overall_score: newScores.overall,
+          malware_score: newScores.malware,
+          phishing_score: newScores.phishing,
+          network_score: newScores.network,
+          log_score: newScores.logAnomaly,
+          prediction_24h: Math.round(newScores.overall * 0.9 + Math.random() * 10),
+          predicted_attack_type: newScores.malware > newScores.phishing ? "malware" : "phishing",
+        });
+        await supabase.from("scan_history").insert({
+          user_id: user.id,
+          scan_type: "full_scan",
+          risk_score: newScores.overall,
+          threat_count: Math.round(newScores.overall / 10),
+          results: newScores as any,
+        });
+        // Update risk history
+        setRiskHistory(prev => [...prev, {
+          date: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+          score: newScores.overall,
+        }].slice(-30));
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          threats: prev.threats + Math.round(newScores.overall / 10),
+          blocked: prev.blocked + Math.round(newScores.overall / 5),
+        }));
+      }
+
       toast({
         title: "Full System Scan Complete",
         description: `Overall risk score: ${newScores.overall}/100`,
@@ -60,6 +133,9 @@ const Dashboard = () => {
     }, 4000);
   };
 
+  const adaptiveScore = hasScanned ? scores.overall : (profile?.risk_baseline ? Number(profile.risk_baseline) : 0);
+  const trend = riskHistory.length >= 2 ? riskHistory[riskHistory.length - 1].score - (riskHistory[riskHistory.length - Math.min(8, riskHistory.length)]?.score || 0) : 0;
+
   return (
     <AppLayout>
       <div className="mb-6 md:mb-8">
@@ -67,12 +143,12 @@ const Dashboard = () => {
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Real-time threat monitoring, prediction & risk assessment</p>
       </div>
 
-      {/* Unified Risk Board with Full Scan */}
+      {/* Unified Risk & Personalized Assessment Board */}
       <div className="bg-card border border-border rounded-xl p-4 md:p-8 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">Overall Risk Assessment</h3>
+            <h3 className="text-lg font-semibold text-foreground">Unified Risk Assessment</h3>
           </div>
           <Button onClick={handleFullScan} disabled={scanning} className="bg-primary text-primary-foreground hover:bg-primary/90">
             {scanning ? (
@@ -91,23 +167,94 @@ const Dashboard = () => {
               <Shield className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
             </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-around flex-wrap gap-4 md:gap-8">
-            <RiskGauge score={scores.overall} label="Overall Risk" size="lg" />
-            <RiskGauge score={scores.malware} label="Malware" />
-            <RiskGauge score={scores.phishing} label="Phishing" />
-            <RiskGauge score={scores.network} label="Network" />
-            <RiskGauge score={scores.logAnomaly} label="Log Anomaly" />
+        ) : !hasScanned ? (
+          <div className="text-center py-12">
+            <Shield className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-30" />
+            <p className="text-foreground font-semibold">No scan data yet</p>
+            <p className="text-sm text-muted-foreground mt-1">Run a full scan to see your risk assessment</p>
           </div>
+        ) : (
+          <>
+            {/* Risk Gauges */}
+            <div className="flex items-center justify-around flex-wrap gap-4 md:gap-8 mb-6">
+              <RiskGauge score={scores.overall} label="Overall Risk" size="lg" />
+              <RiskGauge score={scores.malware} label="Malware" />
+              <RiskGauge score={scores.phishing} label="Phishing" />
+              <RiskGauge score={scores.network} label="Network" />
+              <RiskGauge score={scores.logAnomaly} label="Log Anomaly" />
+            </div>
+
+            {/* Personalized Risk Profile */}
+            <div className="border-t border-border pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-4 h-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Personalized Risk Profile</h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Risk Trend (7d)</p>
+                  <div className="flex items-center gap-2">
+                    {trend > 0 ? <TrendingUp className="w-4 h-4 text-destructive" /> : <TrendingDown className="w-4 h-4 text-success" />}
+                    <span className={`text-lg font-bold font-mono ${trend > 0 ? "text-destructive" : "text-success"}`}>
+                      {trend > 0 ? "+" : ""}{trend}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Total Scans</p>
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-primary" />
+                    <span className="text-lg font-bold font-mono text-foreground">{profile?.total_scans ?? 0}</span>
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Threats Found</p>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-warning" />
+                    <span className="text-lg font-bold font-mono text-foreground">{profile?.threats_detected ?? 0}</span>
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Adaptive Window</p>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-accent" />
+                    <span className="text-sm font-mono text-foreground">30-day rolling</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk History Chart */}
+              {riskHistory.length > 1 && (
+                <div>
+                  <p className="text-xs font-semibold text-foreground mb-2">Risk Score History</p>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <AreaChart data={riskHistory}>
+                      <defs>
+                        <linearGradient id="riskHistGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 18%)" />
+                      <XAxis dataKey="date" tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} interval={Math.max(0, Math.floor(riskHistory.length / 6))} />
+                      <YAxis tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} domain={[0, 100]} />
+                      <Tooltip contentStyle={{ background: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 15%, 18%)", borderRadius: "8px", color: "hsl(200, 20%, 90%)" }} />
+                      <Area type="monotone" dataKey="score" stroke="hsl(175, 80%, 50%)" fill="url(#riskHistGrad)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-        <StatCard icon={AlertTriangle} label="Active Threats" value={stats.threats} change={`${stats.threats > 20 ? "+" : ""}${stats.threats - 20}`} changeType={stats.threats > 20 ? "negative" : "positive"} />
-        <StatCard icon={CheckCircle} label="Threats Blocked" value={stats.blocked} change="+12%" changeType="positive" />
-        <StatCard icon={Bug} label="Malware Detected" value={stats.malware} change={`${stats.malware > 10 ? "+" : "-"}${Math.abs(stats.malware - 10)}`} changeType={stats.malware > 10 ? "negative" : "positive"} />
-        <StatCard icon={Fish} label="Phishing Attempts" value={stats.phishing} change={`+${stats.phishing}`} changeType="negative" />
+        <StatCard icon={AlertTriangle} label="Active Threats" value={stats.threats} change={stats.threats > 0 ? `${stats.threats}` : "0"} changeType={stats.threats > 20 ? "negative" : "positive"} />
+        <StatCard icon={CheckCircle} label="Threats Blocked" value={stats.blocked} change={stats.blocked > 0 ? `${stats.blocked}` : "0"} changeType="positive" />
+        <StatCard icon={Bug} label="Malware Detected" value={stats.malware} change={`${stats.malware}`} changeType={stats.malware > 10 ? "negative" : "positive"} />
+        <StatCard icon={Fish} label="Phishing Attempts" value={stats.phishing} change={`${stats.phishing}`} changeType="negative" />
       </div>
 
       {/* False Alert Filtering Engine */}
@@ -118,11 +265,6 @@ const Dashboard = () => {
       {/* Predictive Engine */}
       <div className="mb-6">
         <PredictiveEngine />
-      </div>
-
-      {/* Personalized Risk */}
-      <div className="mb-6">
-        <PersonalizedRisk />
       </div>
 
       {/* Smart Recommendations */}

@@ -8,6 +8,8 @@ import RiskGauge from "@/components/RiskGauge";
 import ExportButton from "@/components/ExportReport";
 import AIThreatAnalysis from "@/components/AIThreatAnalysis";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LogEntry {
   line: number;
@@ -50,6 +52,7 @@ const generateLogs = (): LogEntry[] => {
 };
 
 const LogAnalysis = () => {
+  const { user } = useAuth();
   const [logText, setLogText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<LogEntry[] | null>(null);
@@ -57,10 +60,23 @@ const LogAnalysis = () => {
   const handleAnalyze = () => {
     setAnalyzing(true);
     setResults(null);
-    setTimeout(() => {
+    setTimeout(async () => {
       const generated = generateLogs();
       setAnalyzing(false);
       setResults(generated);
+
+      if (user) {
+        const riskScore = Math.round(generated.reduce((a, b) => a + b.severity, 0) / generated.length);
+        await supabase.from("scan_history").insert({
+          user_id: user.id,
+          scan_type: "log_analysis",
+          risk_score: riskScore,
+          threat_count: generated.filter(r => r.severity >= 70).length,
+          target: "log_input",
+          results: generated as any,
+        });
+      }
+
       toast({
         variant: "destructive",
         title: "Log Analysis Complete",
