@@ -104,6 +104,7 @@ const NetworkAnomaly = () => {
             threats_detected: (profile?.threats_detected ?? 0) + maliciousCount,
           }).eq("user_id", user.id),
         ]);
+        await refreshProfile();
       }
 
       toast({

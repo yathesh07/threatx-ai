@@ -84,6 +84,7 @@ const PhishingDetection = () => {
             threats_detected: (profile?.threats_detected ?? 0) + threatCount,
           }).eq("user_id", user.id),
         ]);
+        await refreshProfile();
       }
     }, 2000);
   };

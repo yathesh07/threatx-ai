@@ -103,6 +103,7 @@ const LogAnalysis = () => {
             threats_detected: (profile?.threats_detected ?? 0) + highSeverity,
           }).eq("user_id", user.id),
         ]);
+        await refreshProfile();
       }
 
       toast({
