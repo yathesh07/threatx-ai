@@ -52,7 +52,7 @@ const generateLogs = (): LogEntry[] => {
 };
 
 const LogAnalysis = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [logText, setLogText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<LogEntry[] | null>(null);

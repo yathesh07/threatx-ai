@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [scores, setScores] = useState({ overall: 0, malware: 0, phishing: 0, network: 0, logAnomaly: 0 });
   const [scanning, setScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);

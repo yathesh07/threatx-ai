@@ -45,7 +45,7 @@ const generateConnections = (): ConnectionItem[] =>
   }));
 
 const NetworkAnomaly = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [scanning, setScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [trafficData, setTrafficData] = useState<TrafficItem[]>([]);

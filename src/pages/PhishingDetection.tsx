@@ -22,7 +22,7 @@ const neutralIndicators = ["HTTP protocol used", "Minor URL anomaly", "Unusual q
 const safeIndicators = ["Valid SSL certificate", "Established domain", "Clean reputation", "Known safe domain"];
 
 const PhishingDetection = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [url, setUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<PhishingResult | null>(null);
