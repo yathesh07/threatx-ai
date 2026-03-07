@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,10 +52,31 @@ const generateLogs = (): LogEntry[] => {
 };
 
 const LogAnalysis = () => {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [logText, setLogText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<LogEntry[] | null>(null);
+
+  // Load last scan on mount
+  useEffect(() => {
+    if (!user) return;
+    const loadLastScan = async () => {
+      const { data } = await supabase
+        .from("scan_history")
+        .select("results")
+        .eq("user_id", user.id)
+        .eq("scan_type", "log_analysis")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].results) {
+        const parsed = data[0].results as any;
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].content) {
+          setResults(parsed as LogEntry[]);
+        }
+      }
+    };
+    loadLastScan();
+  }, [user]);
 
   const handleAnalyze = () => {
     setAnalyzing(true);
@@ -67,14 +88,22 @@ const LogAnalysis = () => {
 
       if (user) {
         const riskScore = Math.round(generated.reduce((a, b) => a + b.severity, 0) / generated.length);
-        await supabase.from("scan_history").insert({
-          user_id: user.id,
-          scan_type: "log_analysis",
-          risk_score: riskScore,
-          threat_count: generated.filter(r => r.severity >= 70).length,
-          target: "log_input",
-          results: generated as any,
-        });
+        const highSeverity = generated.filter(r => r.severity >= 70).length;
+        await Promise.all([
+          supabase.from("scan_history").insert({
+            user_id: user.id,
+            scan_type: "log_analysis",
+            risk_score: riskScore,
+            threat_count: highSeverity,
+            target: "log_input",
+            results: generated as any,
+          }),
+          supabase.from("profiles").update({
+            total_scans: (profile?.total_scans ?? 0) + 1,
+            threats_detected: (profile?.threats_detected ?? 0) + highSeverity,
+          }).eq("user_id", user.id),
+        ]);
+        await refreshProfile();
       }
 
       toast({

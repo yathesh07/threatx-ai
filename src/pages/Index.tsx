@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import RiskGauge from "@/components/RiskGauge";
 import ThreatFeed from "@/components/ThreatFeed";
@@ -17,66 +17,57 @@ import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [scores, setScores] = useState({ overall: 0, malware: 0, phishing: 0, network: 0, logAnomaly: 0 });
   const [scanning, setScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [stats, setStats] = useState({ threats: 0, blocked: 0, malware: 0, phishing: 0 });
   const [riskHistory, setRiskHistory] = useState<{ date: string; score: number }[]>([]);
 
-  // Load last scan from DB on mount
-  useEffect(() => {
+  const loadDashboardData = useCallback(async () => {
     if (!user) return;
-    const loadLastScan = async () => {
-      const { data } = await supabase
-        .from("risk_scores")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (data && data.length > 0) {
-        const s = data[0];
-        setScores({
-          overall: Number(s.overall_score),
-          malware: Number(s.malware_score) || 0,
-          phishing: Number(s.phishing_score) || 0,
-          network: Number(s.network_score) || 0,
-          logAnomaly: Number(s.log_score) || 0,
-        });
-        setHasScanned(true);
-      }
-      // Load risk history
-      const { data: history } = await supabase
-        .from("risk_scores")
-        .select("created_at, overall_score")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .limit(30);
-      if (history && history.length > 0) {
-        setRiskHistory(history.map(h => ({
-          date: new Date(h.created_at).toLocaleDateString([], { month: "short", day: "numeric" }),
-          score: Number(h.overall_score),
-        })));
-      }
-      // Load stats from scan_history
-      const { data: scans } = await supabase
-        .from("scan_history")
-        .select("scan_type, threat_count")
-        .eq("user_id", user.id);
-      if (scans && scans.length > 0) {
-        const malwareThreats = scans.filter(s => s.scan_type === "malware").reduce((a, b) => a + (b.threat_count || 0), 0);
-        const phishingThreats = scans.filter(s => s.scan_type === "phishing").reduce((a, b) => a + (b.threat_count || 0), 0);
-        const totalThreats = scans.reduce((a, b) => a + (b.threat_count || 0), 0);
-        setStats({
-          threats: totalThreats,
-          blocked: Math.round(totalThreats * 1.5 + scans.length * 50),
-          malware: malwareThreats,
-          phishing: phishingThreats,
-        });
-      }
-    };
-    loadLastScan();
+    
+    const [lastScanRes, historyRes, scansRes] = await Promise.all([
+      supabase.from("risk_scores").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+      supabase.from("risk_scores").select("created_at, overall_score").eq("user_id", user.id).order("created_at", { ascending: true }).limit(30),
+      supabase.from("scan_history").select("scan_type, threat_count").eq("user_id", user.id),
+    ]);
+
+    if (lastScanRes.data && lastScanRes.data.length > 0) {
+      const s = lastScanRes.data[0];
+      setScores({
+        overall: Number(s.overall_score),
+        malware: Number(s.malware_score) || 0,
+        phishing: Number(s.phishing_score) || 0,
+        network: Number(s.network_score) || 0,
+        logAnomaly: Number(s.log_score) || 0,
+      });
+      setHasScanned(true);
+    }
+
+    if (historyRes.data && historyRes.data.length > 0) {
+      setRiskHistory(historyRes.data.map(h => ({
+        date: new Date(h.created_at).toLocaleDateString([], { month: "short", day: "numeric" }),
+        score: Number(h.overall_score),
+      })));
+    }
+
+    if (scansRes.data && scansRes.data.length > 0) {
+      const malwareThreats = scansRes.data.filter(s => s.scan_type === "malware").reduce((a, b) => a + (b.threat_count || 0), 0);
+      const phishingThreats = scansRes.data.filter(s => s.scan_type === "phishing").reduce((a, b) => a + (b.threat_count || 0), 0);
+      const totalThreats = scansRes.data.reduce((a, b) => a + (b.threat_count || 0), 0);
+      setStats({
+        threats: totalThreats,
+        blocked: Math.round(totalThreats * 1.5 + scansRes.data.length * 50),
+        malware: malwareThreats,
+        phishing: phishingThreats,
+      });
+    }
   }, [user]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const handleFullScan = async () => {
     setScanning(true);
@@ -93,36 +84,52 @@ const Dashboard = () => {
       setHasScanned(true);
       setScanning(false);
 
-      // Persist to database
       if (user) {
-        await supabase.from("risk_scores").insert({
-          user_id: user.id,
-          overall_score: newScores.overall,
-          malware_score: newScores.malware,
-          phishing_score: newScores.phishing,
-          network_score: newScores.network,
-          log_score: newScores.logAnomaly,
-          prediction_24h: Math.round(newScores.overall * 0.9 + Math.random() * 10),
-          predicted_attack_type: newScores.malware > newScores.phishing ? "malware" : "phishing",
-        });
-        await supabase.from("scan_history").insert({
-          user_id: user.id,
-          scan_type: "full_scan",
-          risk_score: newScores.overall,
-          threat_count: Math.round(newScores.overall / 10),
-          results: newScores as any,
-        });
-        // Update risk history
+        const threatCount = Math.round(newScores.overall / 10);
+        
+        // Persist risk score and scan history
+        await Promise.all([
+          supabase.from("risk_scores").insert({
+            user_id: user.id,
+            overall_score: newScores.overall,
+            malware_score: newScores.malware,
+            phishing_score: newScores.phishing,
+            network_score: newScores.network,
+            log_score: newScores.logAnomaly,
+            prediction_24h: Math.round(newScores.overall * 0.9 + Math.random() * 10),
+            predicted_attack_type: newScores.malware > newScores.phishing ? "malware" : "phishing",
+          }),
+          supabase.from("scan_history").insert({
+            user_id: user.id,
+            scan_type: "full_scan",
+            risk_score: newScores.overall,
+            threat_count: threatCount,
+            results: newScores as any,
+          }),
+          // Update profile stats
+          supabase.from("profiles").update({
+            total_scans: (profile?.total_scans ?? 0) + 1,
+            threats_detected: (profile?.threats_detected ?? 0) + threatCount,
+          }).eq("user_id", user.id),
+        ]);
+
+        // Update local risk history
         setRiskHistory(prev => [...prev, {
           date: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
           score: newScores.overall,
         }].slice(-30));
+
         // Update stats
         setStats(prev => ({
           ...prev,
-          threats: prev.threats + Math.round(newScores.overall / 10),
+          threats: prev.threats + threatCount,
           blocked: prev.blocked + Math.round(newScores.overall / 5),
         }));
+
+        // Refresh profile to update stats
+        await refreshProfile();
+        // Reload dashboard data to sync everything
+        await loadDashboardData();
       }
 
       toast({
@@ -133,7 +140,6 @@ const Dashboard = () => {
     }, 4000);
   };
 
-  const adaptiveScore = hasScanned ? scores.overall : (profile?.risk_baseline ? Number(profile.risk_baseline) : 0);
   const trend = riskHistory.length >= 2 ? riskHistory[riskHistory.length - 1].score - (riskHistory[riskHistory.length - Math.min(8, riskHistory.length)]?.score || 0) : 0;
 
   return (
