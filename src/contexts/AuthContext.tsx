@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   profile: { username: string; display_name: string | null; risk_baseline: number | null; total_scans: number | null; threats_detected: number | null } | null;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   profile: null,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -42,28 +44,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
       return;
     }
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("username, display_name, risk_baseline, total_scans, threats_detected")
-        .eq("user_id", user.id)
-        .single();
-      if (data) setProfile(data);
-    };
-    fetchProfile();
+    const { data } = await supabase
+      .from("profiles")
+      .select("username, display_name, risk_baseline, total_scans, threats_detected")
+      .eq("user_id", user.id)
+      .single();
+    if (data) setProfile(data);
   }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, profile, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, profile, signOut, refreshProfile: fetchProfile }}>
       {children}
     </AuthContext.Provider>
   );
