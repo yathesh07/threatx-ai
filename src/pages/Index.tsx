@@ -126,8 +126,10 @@ const Dashboard = () => {
           blocked: prev.blocked + Math.round(newScores.overall / 5),
         }));
 
+        // Refresh profile to update stats
+        await refreshProfile();
         // Reload dashboard data to sync everything
-        setTimeout(() => loadDashboardData(), 500);
+        await loadDashboardData();
       }
 
       toast({
