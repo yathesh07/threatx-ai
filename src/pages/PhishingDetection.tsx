@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,31 @@ const neutralIndicators = ["HTTP protocol used", "Minor URL anomaly", "Unusual q
 const safeIndicators = ["Valid SSL certificate", "Established domain", "Clean reputation", "Known safe domain"];
 
 const PhishingDetection = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [url, setUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<PhishingResult | null>(null);
+
+  // Load last scan on mount
+  useEffect(() => {
+    if (!user) return;
+    const loadLastScan = async () => {
+      const { data } = await supabase
+        .from("scan_history")
+        .select("results")
+        .eq("user_id", user.id)
+        .eq("scan_type", "phishing")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].results) {
+        const parsed = data[0].results as any;
+        if (parsed.url && typeof parsed.score === "number") {
+          setResult(parsed as PhishingResult);
+        }
+      }
+    };
+    loadLastScan();
+  }, [user]);
 
   const handleScan = () => {
     if (!url) return;
@@ -47,16 +68,22 @@ const PhishingDetection = () => {
 
       setResult({ url, score, indicators });
 
-      // Persist
+      const threatCount = score > 50 ? 1 : 0;
       if (user) {
-        await supabase.from("scan_history").insert({
-          user_id: user.id,
-          scan_type: "phishing",
-          risk_score: score,
-          threat_count: score > 50 ? 1 : 0,
-          target: url,
-          results: { url, score, indicators } as any,
-        });
+        await Promise.all([
+          supabase.from("scan_history").insert({
+            user_id: user.id,
+            scan_type: "phishing",
+            risk_score: score,
+            threat_count: threatCount,
+            target: url,
+            results: { url, score, indicators } as any,
+          }),
+          supabase.from("profiles").update({
+            total_scans: (profile?.total_scans ?? 0) + 1,
+            threats_detected: (profile?.threats_detected ?? 0) + threatCount,
+          }).eq("user_id", user.id),
+        ]);
       }
     }, 2000);
   };

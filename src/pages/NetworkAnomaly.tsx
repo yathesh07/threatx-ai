@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import RiskGauge from "@/components/RiskGauge";
@@ -9,7 +9,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const generateTraffic = () => {
+interface TrafficItem {
+  protocol: string;
+  normal: number;
+  anomalous: number;
+}
+
+interface ConnectionItem {
+  ip: string;
+  port: number;
+  status: string;
+  packets: number;
+  risk: number;
+}
+
+const generateTraffic = (): TrafficItem[] => {
   const protocols = ["HTTP", "HTTPS", "DNS", "FTP", "SSH", "SMTP"];
   return protocols.map((protocol) => ({
     protocol,
@@ -21,7 +35,7 @@ const generateTraffic = () => {
 const ips = ["192.168.1.105", "10.0.0.45", "172.16.0.12", "203.0.113.50", "192.168.1.200", "10.0.1.88", "172.16.2.33"];
 const statuses = ["normal", "suspicious", "malicious"];
 
-const generateConnections = () =>
+const generateConnections = (): ConnectionItem[] =>
   Array.from({ length: 5 }, () => ({
     ip: ips[Math.floor(Math.random() * ips.length)],
     port: [22, 53, 80, 443, 4444, 8080, 3389][Math.floor(Math.random() * 7)],
@@ -31,12 +45,36 @@ const generateConnections = () =>
   }));
 
 const NetworkAnomaly = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [scanning, setScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
-  const [trafficData, setTrafficData] = useState<ReturnType<typeof generateTraffic>>([]);
-  const [connections, setConnections] = useState<ReturnType<typeof generateConnections>>([]);
+  const [trafficData, setTrafficData] = useState<TrafficItem[]>([]);
+  const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [networkRisk, setNetworkRisk] = useState(0);
+
+  // Load last scan on mount
+  useEffect(() => {
+    if (!user) return;
+    const loadLastScan = async () => {
+      const { data } = await supabase
+        .from("scan_history")
+        .select("results, risk_score")
+        .eq("user_id", user.id)
+        .eq("scan_type", "network")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length > 0 && data[0].results) {
+        const parsed = data[0].results as any;
+        if (parsed.traffic && parsed.connections) {
+          setTrafficData(parsed.traffic as TrafficItem[]);
+          setConnections(parsed.connections as ConnectionItem[]);
+          setNetworkRisk(Number(data[0].risk_score) || 0);
+          setHasScanned(true);
+        }
+      }
+    };
+    loadLastScan();
+  }, [user]);
 
   const handleScan = () => {
     setScanning(true);
@@ -52,14 +90,20 @@ const NetworkAnomaly = () => {
 
       if (user) {
         const maliciousCount = conns.filter(c => c.status === "malicious").length;
-        await supabase.from("scan_history").insert({
-          user_id: user.id,
-          scan_type: "network",
-          risk_score: risk,
-          threat_count: maliciousCount,
-          target: "network_scan",
-          results: { traffic, connections: conns } as any,
-        });
+        await Promise.all([
+          supabase.from("scan_history").insert({
+            user_id: user.id,
+            scan_type: "network",
+            risk_score: risk,
+            threat_count: maliciousCount,
+            target: "network_scan",
+            results: { traffic, connections: conns } as any,
+          }),
+          supabase.from("profiles").update({
+            total_scans: (profile?.total_scans ?? 0) + 1,
+            threats_detected: (profile?.threats_detected ?? 0) + maliciousCount,
+          }).eq("user_id", user.id),
+        ]);
       }
 
       toast({
