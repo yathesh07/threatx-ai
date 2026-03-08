@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2 } from "lucide-react";
+import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2, Pencil } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import AvatarPicker from "@/components/AvatarPicker";
 
