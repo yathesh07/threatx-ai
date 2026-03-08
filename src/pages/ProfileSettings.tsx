@@ -128,7 +128,8 @@ const ProfileSettings = () => {
                 <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
                   <User className="w-12 h-12 text-primary" />
                 </div>
-              )}
+            )}
+            <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
