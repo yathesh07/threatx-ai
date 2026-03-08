@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  profile: { username: string; display_name: string | null; risk_baseline: number | null; total_scans: number | null; threats_detected: number | null } | null;
+  profile: { username: string; display_name: string | null; avatar_url: string | null; risk_baseline: number | null; total_scans: number | null; threats_detected: number | null } | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
