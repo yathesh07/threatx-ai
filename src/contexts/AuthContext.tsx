@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  profile: { username: string; display_name: string | null; risk_baseline: number | null; total_scans: number | null; threats_detected: number | null } | null;
+  profile: { username: string; display_name: string | null; avatar_url: string | null; risk_baseline: number | null; total_scans: number | null; threats_detected: number | null } | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const { data } = await supabase
       .from("profiles")
-      .select("username, display_name, risk_baseline, total_scans, threats_detected")
+      .select("username, display_name, avatar_url, risk_baseline, total_scans, threats_detected")
       .eq("user_id", user.id)
       .single();
     if (data) setProfile(data);
