@@ -71,7 +71,11 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
       <div className="p-4 border-t border-border space-y-3">
         {profile && (
           <Link to="/profile" onClick={onClose} className="bg-secondary rounded-lg p-3 flex items-center gap-2 hover:bg-secondary/80 transition-colors block">
-            <User className="w-4 h-4 text-primary" />
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-primary/30" />
+            ) : (
+              <User className="w-4 h-4 text-primary" />
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground font-medium truncate">{profile.display_name || profile.username}</p>
               <p className="text-xs text-muted-foreground font-mono">Risk: {profile.risk_baseline ?? 50}</p>
