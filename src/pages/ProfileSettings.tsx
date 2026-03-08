@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import AvatarPicker from "@/components/AvatarPicker";
 
 const ProfileSettings = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -73,6 +74,20 @@ const ProfileSettings = () => {
     toast({ title: "Avatar removed" });
   };
 
+  const handlePresetAvatar = async (src: string) => {
+    if (!user) return;
+    setUploading(true);
+    const { error } = await supabase.from("profiles").update({ avatar_url: src }).eq("user_id", user.id);
+    setUploading(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Failed to set avatar", description: error.message });
+    } else {
+      setAvatarUrl(src);
+      await refreshProfile();
+      toast({ title: "Avatar updated", description: "Your avatar has been changed." });
+    }
+  };
+
   const handleSave = async () => {
     if (!user || !username.trim()) {
       toast({ variant: "destructive", title: "Username is required" });
@@ -113,7 +128,8 @@ const ProfileSettings = () => {
                 <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
                   <User className="w-12 h-12 text-primary" />
                 </div>
-              )}
+            )}
+            <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
