@@ -16,6 +16,7 @@ const ProfileSettings = () => {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     if (profile) {
