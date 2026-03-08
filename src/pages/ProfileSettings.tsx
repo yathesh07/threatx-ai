@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2 } from "lucide-react";
+import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2, Pencil } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import AvatarPicker from "@/components/AvatarPicker";
 
@@ -16,6 +16,7 @@ const ProfileSettings = () => {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -83,6 +84,7 @@ const ProfileSettings = () => {
       toast({ variant: "destructive", title: "Failed to set avatar", description: error.message });
     } else {
       setAvatarUrl(src);
+      setShowAvatarPicker(false);
       await refreshProfile();
       toast({ title: "Avatar updated", description: "Your avatar has been changed." });
     }
@@ -138,9 +140,18 @@ const ProfileSettings = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             </div>
-            {avatarUrl && (
-              <button onClick={handleRemoveAvatar} disabled={uploading} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 mx-auto mb-3 transition-colors">
-                <Trash2 className="w-3 h-3" /> Remove photo
+             {avatarUrl ? (
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <button onClick={handleRemoveAvatar} disabled={uploading} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+                  <Trash2 className="w-3 h-3" /> Remove
+                </button>
+                <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  <Pencil className="w-3 h-3" /> Change
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mx-auto mb-3 transition-colors">
+                <Pencil className="w-3 h-3" /> Choose avatar
               </button>
             )}
             <h3 className="text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "User"}</h3>
@@ -165,9 +176,11 @@ const ProfileSettings = () => {
               </div>
             </div>
 
-            <div className="border-t border-border mt-5 pt-5">
-              <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
-            </div>
+            {showAvatarPicker && (
+              <div className="border-t border-border mt-5 pt-5">
+                <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
+              </div>
+            )}
           </div>
         </div>
 
