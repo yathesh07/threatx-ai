@@ -164,6 +164,10 @@ const ProfileSettings = () => {
                 <span className="font-mono font-bold text-foreground">{profile?.risk_baseline ?? 50}</span>
               </div>
             </div>
+
+            <div className="border-t border-border mt-5 pt-5">
+              <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
+            </div>
           </div>
         </div>
 
