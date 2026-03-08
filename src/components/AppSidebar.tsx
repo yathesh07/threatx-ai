@@ -1,4 +1,4 @@
-import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, User, ClipboardList, Zap, X } from "lucide-react";
+import { Shield, Activity, Bug, Fish, FileText, BarChart3, LogOut, User, ClipboardList, Zap, X, Settings, Info } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,6 +11,7 @@ const navItems = [
   { icon: FileText, label: "Log Analysis", path: "/logs" },
   { icon: ClipboardList, label: "Threat Logs", path: "/threat-logs" },
   { icon: Zap, label: "Incident Response", path: "/incidents" },
+  { icon: Info, label: "About", path: "/about" },
 ];
 
 interface AppSidebarProps {
@@ -69,13 +70,14 @@ const AppSidebar = ({ mobileOpen, onClose }: AppSidebarProps) => {
 
       <div className="p-4 border-t border-border space-y-3">
         {profile && (
-          <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
+          <Link to="/profile" onClick={onClose} className="bg-secondary rounded-lg p-3 flex items-center gap-2 hover:bg-secondary/80 transition-colors block">
             <User className="w-4 h-4 text-primary" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground font-medium truncate">{profile.display_name || profile.username}</p>
               <p className="text-xs text-muted-foreground font-mono">Risk: {profile.risk_baseline ?? 50}</p>
             </div>
-          </div>
+            <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+          </Link>
         )}
         <div className="bg-secondary rounded-lg p-3">
           <p className="text-xs text-muted-foreground font-mono">System Status</p>

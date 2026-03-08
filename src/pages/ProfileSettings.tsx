@@ -1,0 +1,150 @@
+import { useState, useEffect } from "react";
+import AppLayout from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, Bug, AlertTriangle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+const ProfileSettings = () => {
+  const { user, profile, refreshProfile } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name || "");
+      setUsername(profile.username || "");
+    }
+  }, [profile]);
+
+  const handleSave = async () => {
+    if (!user || !username.trim()) {
+      toast({ variant: "destructive", title: "Username is required" });
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ display_name: displayName.trim() || null, username: username.trim() })
+      .eq("user_id", user.id);
+    setSaving(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Update failed", description: error.message });
+    } else {
+      await refreshProfile();
+      toast({ title: "Profile updated", description: "Your changes have been saved." });
+    }
+  };
+
+  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+
+  return (
+    <AppLayout>
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Profile Settings</h2>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your account and preferences</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <div className="lg:col-span-1">
+          <div className="bg-card border border-border rounded-xl p-6 text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center mx-auto mb-4">
+              <User className="w-10 h-10 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "User"}</h3>
+            <p className="text-sm text-muted-foreground font-mono mt-1">{user?.email}</p>
+            <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
+              <Calendar className="w-3 h-3" />
+              <span>Member since {memberSince}</span>
+            </div>
+
+            <div className="border-t border-border mt-5 pt-5 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground"><BarChart3 className="w-4 h-4" /> Total Scans</span>
+                <span className="font-mono font-bold text-foreground">{profile?.total_scans ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground"><AlertTriangle className="w-4 h-4" /> Threats Found</span>
+                <span className="font-mono font-bold text-foreground">{profile?.threats_detected ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground"><Shield className="w-4 h-4" /> Risk Baseline</span>
+                <span className="font-mono font-bold text-foreground">{profile?.risk_baseline ?? 50}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Edit Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" /> Account Information
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+                <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-2.5">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-mono text-muted-foreground">{user?.email}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Username</label>
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  className="bg-secondary border-border font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Display Name</label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter display name"
+                  className="bg-secondary border-border text-sm"
+                />
+              </div>
+              <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+
+          {/* Security Info */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" /> Security
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Authentication</p>
+                  <p className="text-xs text-muted-foreground">Email & password authentication active</p>
+                </div>
+                <span className="text-xs font-mono px-2 py-1 rounded-full bg-success/10 text-success border border-success/20">ACTIVE</span>
+              </div>
+              <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Session</p>
+                  <p className="text-xs text-muted-foreground">Current session is valid and encrypted</p>
+                </div>
+                <span className="text-xs font-mono px-2 py-1 rounded-full bg-success/10 text-success border border-success/20">SECURE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default ProfileSettings;
