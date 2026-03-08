@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Save, Loader2, Shield, Mail, Calendar, BarChart3, AlertTriangle, Camera, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import AvatarPicker from "@/components/AvatarPicker";
 
 const ProfileSettings = () => {
   const { user, profile, refreshProfile } = useAuth();
