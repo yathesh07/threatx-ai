@@ -140,9 +140,18 @@ const ProfileSettings = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             </div>
-            {avatarUrl && (
-              <button onClick={handleRemoveAvatar} disabled={uploading} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 mx-auto mb-3 transition-colors">
-                <Trash2 className="w-3 h-3" /> Remove photo
+             {avatarUrl ? (
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <button onClick={handleRemoveAvatar} disabled={uploading} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+                  <Trash2 className="w-3 h-3" /> Remove
+                </button>
+                <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  <Pencil className="w-3 h-3" /> Change
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAvatarPicker(!showAvatarPicker)} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mx-auto mb-3 transition-colors">
+                <Pencil className="w-3 h-3" /> Choose avatar
               </button>
             )}
             <h3 className="text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "User"}</h3>
