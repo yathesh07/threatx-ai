@@ -129,7 +129,6 @@ const ProfileSettings = () => {
                   <User className="w-12 h-12 text-primary" />
                 </div>
             )}
-            <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -164,6 +163,10 @@ const ProfileSettings = () => {
                 <span className="flex items-center gap-2 text-muted-foreground"><Shield className="w-4 h-4" /> Risk Baseline</span>
                 <span className="font-mono font-bold text-foreground">{profile?.risk_baseline ?? 50}</span>
               </div>
+            </div>
+
+            <div className="border-t border-border mt-5 pt-5">
+              <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
             </div>
           </div>
         </div>
