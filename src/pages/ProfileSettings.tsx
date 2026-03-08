@@ -74,6 +74,20 @@ const ProfileSettings = () => {
     toast({ title: "Avatar removed" });
   };
 
+  const handlePresetAvatar = async (src: string) => {
+    if (!user) return;
+    setUploading(true);
+    const { error } = await supabase.from("profiles").update({ avatar_url: src }).eq("user_id", user.id);
+    setUploading(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Failed to set avatar", description: error.message });
+    } else {
+      setAvatarUrl(src);
+      await refreshProfile();
+      toast({ title: "Avatar updated", description: "Your avatar has been changed." });
+    }
+  };
+
   const handleSave = async () => {
     if (!user || !username.trim()) {
       toast({ variant: "destructive", title: "Username is required" });
