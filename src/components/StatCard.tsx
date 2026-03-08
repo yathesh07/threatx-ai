@@ -26,8 +26,8 @@ const StatCard = ({ icon: Icon, label, value, change, changeType = "neutral" }: 
         )}
       </div>
       <div className="mt-3">
-        <p className="text-2xl font-bold font-mono text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+        <p className="text-xl md:text-2xl font-bold font-mono text-foreground">{value}</p>
+        <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{label}</p>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ const PredictiveEngine = () => {
               <p className="text-sm font-semibold text-foreground mb-3">Predicted Attack Vectors</p>
               {attacks.sort((a, b) => b.probability - a.probability).map((a) => (
                 <div key={a.type} className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-32">{a.type}</span>
+                  <span className="text-sm text-muted-foreground w-24 md:w-32 truncate">{a.type}</span>
                   <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all duration-1000`} style={{ width: `${a.probability}%`, background: `hsl(var(--primary))` }} />
                   </div>

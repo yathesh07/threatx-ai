@@ -14,7 +14,7 @@ const getRiskColor = (score: number) => {
 
 const RiskGauge = ({ score, label, size = "sm" }: RiskGaugeProps) => {
   const risk = getRiskColor(score);
-  const dimensions = size === "lg" ? 160 : 100;
+  const dimensions = size === "lg" ? 140 : 80;
   const strokeWidth = size === "lg" ? 10 : 7;
   const radius = (dimensions - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;

@@ -189,7 +189,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Risk Gauges */}
-            <div className="flex items-center justify-around flex-wrap gap-4 md:gap-8 mb-6">
+            <div className="flex items-center justify-around flex-wrap gap-3 md:gap-6 mb-6">
               <RiskGauge score={scores.overall} label="Overall Risk" size="lg" />
               <RiskGauge score={scores.malware} label="Malware" />
               <RiskGauge score={scores.phishing} label="Phishing" />
