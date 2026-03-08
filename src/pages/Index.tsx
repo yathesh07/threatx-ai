@@ -59,8 +59,7 @@ const Dashboard = () => {
       const phishingThreats = scansRes.data
         .filter(s => s.scan_type === "phishing" || s.scan_type === "full_scan")
         .reduce((a, b) => {
-          if (s.scan_type === "phishing") return a + (b.threat_count || 0);
-          // For full scans, estimate phishing threats as ~30% of total
+          if (b.scan_type === "phishing") return a + (b.threat_count || 0);
           return a + Math.round((b.threat_count || 0) * 0.3);
         }, 0);
       const totalThreats = scansRes.data.reduce((a, b) => a + (b.threat_count || 0), 0);
