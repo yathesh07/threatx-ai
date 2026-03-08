@@ -84,6 +84,7 @@ const ProfileSettings = () => {
       toast({ variant: "destructive", title: "Failed to set avatar", description: error.message });
     } else {
       setAvatarUrl(src);
+      setShowAvatarPicker(false);
       await refreshProfile();
       toast({ title: "Avatar updated", description: "Your avatar has been changed." });
     }
