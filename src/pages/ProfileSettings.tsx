@@ -176,9 +176,11 @@ const ProfileSettings = () => {
               </div>
             </div>
 
-            <div className="border-t border-border mt-5 pt-5">
-              <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
-            </div>
+            {showAvatarPicker && (
+              <div className="border-t border-border mt-5 pt-5">
+                <AvatarPicker currentAvatar={avatarUrl} onSelect={handlePresetAvatar} loading={uploading} />
+              </div>
+            )}
           </div>
         </div>
 
