@@ -12,6 +12,8 @@ import NetworkAnomaly from "./pages/NetworkAnomaly";
 import LogAnalysis from "./pages/LogAnalysis";
 import ThreatLogs from "./pages/ThreatLogs";
 import IncidentReport from "./pages/IncidentReport";
+import ProfileSettings from "./pages/ProfileSettings";
+import About from "./pages/About";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/logs" element={<ProtectedRoute><LogAnalysis /></ProtectedRoute>} />
             <Route path="/threat-logs" element={<ProtectedRoute><ThreatLogs /></ProtectedRoute>} />
             <Route path="/incidents" element={<ProtectedRoute><IncidentReport /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+            <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
