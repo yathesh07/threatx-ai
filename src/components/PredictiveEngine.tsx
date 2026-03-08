@@ -57,11 +57,11 @@ const PredictiveEngine = () => {
   const alert = getAlertMessage();
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-2">
           <Brain className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">24h Attack Probability Engine</h3>
+          <h3 className="text-base md:text-lg font-semibold text-foreground">24h Attack Probability</h3>
         </div>
         <Button onClick={runPrediction} disabled={analyzing} size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
           <Zap className="w-4 h-4 mr-1" />
