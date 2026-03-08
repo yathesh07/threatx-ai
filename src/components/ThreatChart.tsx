@@ -34,8 +34,8 @@ const ThreatChart = () => {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 18%)" />
-          <XAxis dataKey="time" stroke="hsl(215, 15%, 50%)" fontSize={12} fontFamily="JetBrains Mono" />
-          <YAxis stroke="hsl(215, 15%, 50%)" fontSize={12} fontFamily="JetBrains Mono" />
+          <XAxis dataKey="time" stroke="hsl(215, 15%, 50%)" fontSize={10} fontFamily="JetBrains Mono" interval="preserveStartEnd" />
+          <YAxis stroke="hsl(215, 15%, 50%)" fontSize={10} fontFamily="JetBrains Mono" width={30} />
           <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 15%, 18%)", borderRadius: "8px", fontFamily: "JetBrains Mono", fontSize: "12px" }} />
           <Area type="monotone" dataKey="threats" stroke="hsl(0, 72%, 55%)" fill="url(#threatGradient)" strokeWidth={2} />
           <Area type="monotone" dataKey="blocked" stroke="hsl(175, 80%, 50%)" fill="url(#blockedGradient)" strokeWidth={2} />

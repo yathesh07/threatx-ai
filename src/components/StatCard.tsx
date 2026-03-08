@@ -16,7 +16,7 @@ const StatCard = ({ icon: Icon, label, value, change, changeType = "neutral" }: 
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/20 transition-colors">
+    <div className="bg-card border border-border rounded-xl p-3 md:p-5 hover:border-primary/20 transition-colors">
       <div className="flex items-start justify-between">
         <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
           <Icon className="w-4 h-4 text-primary" />
@@ -26,8 +26,8 @@ const StatCard = ({ icon: Icon, label, value, change, changeType = "neutral" }: 
         )}
       </div>
       <div className="mt-3">
-        <p className="text-2xl font-bold font-mono text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+        <p className="text-xl md:text-2xl font-bold font-mono text-foreground">{value}</p>
+        <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{label}</p>
       </div>
     </div>
   );

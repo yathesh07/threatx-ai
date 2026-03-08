@@ -57,11 +57,11 @@ const PredictiveEngine = () => {
   const alert = getAlertMessage();
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-2">
           <Brain className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">24h Attack Probability Engine</h3>
+          <h3 className="text-base md:text-lg font-semibold text-foreground">24h Attack Probability</h3>
         </div>
         <Button onClick={runPrediction} disabled={analyzing} size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
           <Zap className="w-4 h-4 mr-1" />
@@ -90,7 +90,7 @@ const PredictiveEngine = () => {
               <p className="text-sm font-semibold text-foreground mb-3">Predicted Attack Vectors</p>
               {attacks.sort((a, b) => b.probability - a.probability).map((a) => (
                 <div key={a.type} className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-32">{a.type}</span>
+                  <span className="text-sm text-muted-foreground w-24 md:w-32 truncate">{a.type}</span>
                   <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all duration-1000`} style={{ width: `${a.probability}%`, background: `hsl(var(--primary))` }} />
                   </div>
