@@ -76,17 +76,60 @@ const Dashboard = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  // Generate user-specific deterministic seed from user ID
+  const userSeed = (user?.id || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+
   const handleFullScan = async () => {
     setScanning(true);
     setTimeout(async () => {
+      // Time-based entropy: hour, minute, day combine for unique-per-scan values
+      const now = new Date();
+      const timeFactor = now.getHours() * 60 + now.getMinutes() + now.getSeconds();
+      const dayFactor = now.getDate() + now.getMonth() * 31;
+      const scanEntropy = timeFactor * 13 + dayFactor * 7 + userSeed;
+
+      // Pseudo-random seeded generator for consistent-per-user but varying-per-scan results
+      const seeded = (offset: number) => {
+        const x = Math.sin(scanEntropy + offset * 9973) * 10000;
+        return x - Math.floor(x); // 0-1
+      };
+
+      // Previous scores influence new ones (drift, not wild swings)
+      const drift = (prev: number, base: number, range: number, offset: number) => {
+        const raw = base + Math.round(seeded(offset) * range);
+        if (prev > 0) return Math.round(prev * 0.3 + raw * 0.7); // 30% memory
+        return raw;
+      };
+
+      // Each module has different risk profiles per user seed
+      const userProfile = userSeed % 4; // 4 risk archetypes
+      const profiles: Record<number, { mBase: number; mRange: number; pBase: number; pRange: number; nBase: number; nRange: number; lBase: number; lRange: number }> = {
+        0: { mBase: 55, mRange: 35, pBase: 25, pRange: 40, nBase: 30, nRange: 45, lBase: 20, lRange: 35 }, // malware-heavy
+        1: { mBase: 20, mRange: 30, pBase: 50, pRange: 40, nBase: 35, nRange: 30, lBase: 30, lRange: 25 }, // phishing-heavy
+        2: { mBase: 30, mRange: 25, pBase: 30, pRange: 30, nBase: 55, nRange: 40, lBase: 40, lRange: 35 }, // network-heavy
+        3: { mBase: 25, mRange: 30, pBase: 35, pRange: 25, nBase: 25, nRange: 30, lBase: 55, lRange: 40 }, // log-heavy
+      };
+      const p = profiles[userProfile];
+
       const newScores = {
         overall: 0,
-        malware: Math.round(Math.random() * 40 + 50),
-        phishing: Math.round(Math.random() * 50 + 30),
-        network: Math.round(Math.random() * 60 + 20),
-        logAnomaly: Math.round(Math.random() * 45 + 35),
+        malware: drift(scores.malware, p.mBase, p.mRange, 1),
+        phishing: drift(scores.phishing, p.pBase, p.pRange, 2),
+        network: drift(scores.network, p.nBase, p.nRange, 3),
+        logAnomaly: drift(scores.logAnomaly, p.lBase, p.lRange, 4),
       };
-      newScores.overall = Math.round((newScores.malware + newScores.phishing + newScores.network + newScores.logAnomaly) / 4);
+
+      // Clamp all to 5-98 range for realism
+      newScores.malware = Math.max(5, Math.min(98, newScores.malware));
+      newScores.phishing = Math.max(5, Math.min(98, newScores.phishing));
+      newScores.network = Math.max(5, Math.min(98, newScores.network));
+      newScores.logAnomaly = Math.max(5, Math.min(98, newScores.logAnomaly));
+
+      // Weighted overall (network & malware weigh more)
+      newScores.overall = Math.round(
+        newScores.malware * 0.3 + newScores.phishing * 0.2 + newScores.network * 0.3 + newScores.logAnomaly * 0.2
+      );
+
       setScores(newScores);
       setHasScanned(true);
       setScanning(false);
@@ -94,7 +137,6 @@ const Dashboard = () => {
       if (user) {
         const threatCount = Math.round(newScores.overall / 10);
         
-        // Persist risk score and scan history
         await Promise.all([
           supabase.from("risk_scores").insert({
             user_id: user.id,
@@ -103,7 +145,7 @@ const Dashboard = () => {
             phishing_score: newScores.phishing,
             network_score: newScores.network,
             log_score: newScores.logAnomaly,
-            prediction_24h: Math.round(newScores.overall * 0.9 + Math.random() * 10),
+            prediction_24h: Math.round(newScores.overall * 0.9 + seeded(5) * 15),
             predicted_attack_type: newScores.malware > newScores.phishing ? "malware" : "phishing",
           }),
           supabase.from("scan_history").insert({
@@ -113,29 +155,24 @@ const Dashboard = () => {
             threat_count: threatCount,
             results: newScores as any,
           }),
-          // Update profile stats
           supabase.from("profiles").update({
             total_scans: (profile?.total_scans ?? 0) + 1,
             threats_detected: (profile?.threats_detected ?? 0) + threatCount,
           }).eq("user_id", user.id),
         ]);
 
-        // Update local risk history
         setRiskHistory(prev => [...prev, {
           date: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
           score: newScores.overall,
         }].slice(-30));
 
-        // Update stats
         setStats(prev => ({
           ...prev,
           threats: prev.threats + threatCount,
           blocked: prev.blocked + Math.round(newScores.overall / 5),
         }));
 
-        // Refresh profile to update stats
         await refreshProfile();
-        // Reload dashboard data to sync everything
         await loadDashboardData();
       }
 
