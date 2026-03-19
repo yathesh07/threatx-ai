@@ -56,6 +56,31 @@ const LogAnalysis = () => {
   const [logText, setLogText] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<LogEntry[] | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["text/plain", "text/csv", "application/json", "text/x-log", ""];
+    const validExts = [".log", ".txt", ".csv", ".json", ".syslog"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      toast({ variant: "destructive", title: "Invalid file", description: "Please upload a .log, .txt, .csv, or .json file" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Max file size is 5MB" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setLogText(text);
+      toast({ title: "File loaded", description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)` });
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   // Load last scan on mount
   useEffect(() => {
