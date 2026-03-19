@@ -167,7 +167,14 @@ const LogAnalysis = () => {
         />
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="border-border">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".log,.txt,.csv,.json,.syslog"
+            className="hidden"
+          />
+          <Button variant="outline" className="border-border" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4 mr-2" />Upload Log File
           </Button>
           <Button onClick={handleAnalyze} disabled={analyzing} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
