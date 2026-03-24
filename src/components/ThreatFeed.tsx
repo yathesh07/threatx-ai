@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, Shield, Activity, Clock } from "lucide-react";
 import { getRiskColor } from "./RiskGauge";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ThreatItem {
   id: string;
@@ -11,25 +12,52 @@ interface ThreatItem {
   description: string;
 }
 
-const sources = ["endpoint-04", "email-gateway", "firewall-01", "endpoint-12", "switch-03", "dns-server", "endpoint-09", "proxy-02"];
-const descriptions: Record<string, string[]> = {
-  Malware: ["Trojan.GenericKD detected in system32", "Ransomware signature in temp folder", "Suspicious DLL loaded by svchost", "PUA detected - adware component"],
-  Phishing: ["Suspicious URL in inbound email", "Credential harvesting page detected", "Fake banking login portal blocked", "Spear phishing with macro attachment"],
-  Network: ["Unusual outbound traffic to unknown IP", "Port scan activity from external source", "DNS exfiltration pattern detected", "Brute-force SSH attempt blocked"],
+const seededRandom = (seed: number, offset: number) => {
+  const x = Math.sin(seed + offset * 9973) * 10000;
+  return x - Math.floor(x);
 };
 
-const generateThreats = (): ThreatItem[] => {
+const sources = ["endpoint-04", "email-gateway", "firewall-01", "endpoint-12", "switch-03", "dns-server", "endpoint-09", "proxy-02", "waf-01", "ids-sensor-03", "vpn-gateway", "siem-collector"];
+const descriptions: Record<string, string[]> = {
+  Malware: [
+    "Trojan.GenericKD detected in system32", "Ransomware signature in temp folder",
+    "Suspicious DLL loaded by svchost", "PUA detected - adware component",
+    "Cryptominer process spawned via PowerShell", "Rootkit activity in kernel space",
+    "Fileless malware via WMI persistence", "Packed binary with entropy 7.9/8.0",
+  ],
+  Phishing: [
+    "Suspicious URL in inbound email", "Credential harvesting page detected",
+    "Fake banking login portal blocked", "Spear phishing with macro attachment",
+    "OAuth consent phishing attempt", "QR code redirecting to malicious site",
+    "CEO fraud email intercepted", "Fake password reset notification blocked",
+  ],
+  Network: [
+    "Unusual outbound traffic to unknown IP", "Port scan activity from external source",
+    "DNS exfiltration pattern detected", "Brute-force SSH attempt blocked",
+    "C2 beacon pattern on port 443", "Lateral movement via SMB detected",
+    "ARP spoofing on VLAN 10", "Unauthorized VPN tunnel established",
+  ],
+};
+
+const generateThreats = (userSeed: number, tick: number): ThreatItem[] => {
   const types = ["Malware", "Phishing", "Network"];
   const times = ["Just now", "1 min ago", "3 min ago", "8 min ago", "15 min ago"];
+  const combinedSeed = userSeed + tick * 137;
+
   return Array.from({ length: 5 }, (_, i) => {
-    const type = types[Math.floor(Math.random() * types.length)];
+    const typeIdx = Math.floor(seededRandom(combinedSeed, i * 5 + 1) * types.length);
+    const type = types[typeIdx];
+    const descIdx = Math.floor(seededRandom(combinedSeed, i * 5 + 2) * descriptions[type].length);
+    const srcIdx = Math.floor(seededRandom(combinedSeed, i * 5 + 3) * sources.length);
+    const severity = 15 + Math.round(seededRandom(combinedSeed, i * 5 + 4) * 80);
+
     return {
       id: String(i),
       type,
-      severity: Math.round(20 + Math.random() * 75),
-      source: sources[Math.floor(Math.random() * sources.length)],
+      severity,
+      source: sources[srcIdx],
       timestamp: times[i],
-      description: descriptions[type][Math.floor(Math.random() * descriptions[type].length)],
+      description: descriptions[type][descIdx],
     };
   });
 };
@@ -41,12 +69,21 @@ const iconMap: Record<string, typeof AlertTriangle> = {
 };
 
 const ThreatFeed = () => {
-  const [threats, setThreats] = useState(generateThreats);
+  const { user } = useAuth();
+  const userSeed = (user?.id || "anonymous").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const [tick, setTick] = useState(0);
+  const [threats, setThreats] = useState(() => generateThreats(userSeed, 0));
 
   useEffect(() => {
-    const interval = setInterval(() => setThreats(generateThreats()), 12000);
+    const interval = setInterval(() => {
+      setTick(t => {
+        const next = t + 1;
+        setThreats(generateThreats(userSeed, next));
+        return next;
+      });
+    }, 12000);
     return () => clearInterval(interval);
-  }, []);
+  }, [userSeed]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 md:p-6">

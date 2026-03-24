@@ -1,53 +1,74 @@
 import { useState, useEffect } from "react";
-import { User, TrendingUp, TrendingDown, Activity, Clock } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Activity, Clock, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import RiskGauge from "./RiskGauge";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-const generateHistoricalRisk = () => {
-  const data = [];
-  const now = new Date();
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * 86400000);
-    data.push({
-      date: date.toLocaleDateString([], { month: "short", day: "numeric" }),
-      score: Math.round(30 + Math.sin(i / 5) * 20 + Math.random() * 15),
-    });
-  }
-  return data;
+const seededRandom = (seed: number, offset: number) => {
+  const x = Math.sin(seed + offset * 9973) * 10000;
+  return x - Math.floor(x);
 };
 
 const PersonalizedRisk = () => {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [history, setHistory] = useState<{ date: string; score: number }[]>([]);
-  const [adaptiveScore, setAdaptiveScore] = useState(50);
+  const [adaptiveScore, setAdaptiveScore] = useState(0);
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
-    const hist = generateHistoricalRisk();
-    setHistory(hist);
-    // Adaptive score based on profile + recent trends
-    const recentAvg = hist.slice(-7).reduce((s, d) => s + d.score, 0) / 7;
-    const baseline = profile?.risk_baseline ?? 50;
-    const scans = profile?.total_scans ?? 0;
-    // More scans = lower baseline over time (learning effect)
-    const scanBonus = Math.min(10, scans * 0.5);
-    setAdaptiveScore(Math.round((recentAvg * 0.6 + baseline * 0.4) - scanBonus));
-  }, [profile]);
+    if (!user) return;
 
-  const trend = history.length >= 2 ? history[history.length - 1].score - history[history.length - 8]?.score : 0;
+    const loadData = async () => {
+      const { data } = await supabase
+        .from("risk_scores")
+        .select("created_at, overall_score")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(30);
+
+      if (data && data.length > 0) {
+        setHasData(true);
+        const hist = data.map(d => ({
+          date: new Date(d.created_at).toLocaleDateString([], { month: "short", day: "numeric" }),
+          score: Number(d.overall_score),
+        }));
+        setHistory(hist);
+
+        // Adaptive score from actual data
+        const recentAvg = hist.slice(-7).reduce((s, d) => s + d.score, 0) / Math.min(7, hist.length);
+        const baseline = profile?.risk_baseline ?? 50;
+        const scans = profile?.total_scans ?? 0;
+        const scanBonus = Math.min(10, scans * 0.5);
+        setAdaptiveScore(Math.round((recentAvg * 0.7 + baseline * 0.3) - scanBonus));
+      } else {
+        // No scans yet — show user-specific baseline, not always 50
+        const userSeed = user.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const baselineScore = 30 + Math.floor(seededRandom(userSeed, 42) * 40); // 30-70 range
+        setAdaptiveScore(baselineScore);
+        setHasData(false);
+      }
+    };
+
+    loadData();
+  }, [user, profile]);
+
+  const trend = history.length >= 2
+    ? history[history.length - 1].score - (history[history.length - Math.min(8, history.length)]?.score || 0)
+    : 0;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6">
+    <div className="bg-card border border-border rounded-xl p-4 md:p-6">
       <div className="flex items-center gap-2 mb-6">
         <User className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold text-foreground">Personalized Risk Profile</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
         <div className="flex justify-center">
           <RiskGauge score={adaptiveScore} label="Your Risk Score" size="lg" />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div className="bg-secondary/50 rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-1">Risk Trend (7d)</p>
             <div className="flex items-center gap-2">
@@ -69,11 +90,11 @@ const PersonalizedRisk = () => {
             </div>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div className="bg-secondary/50 rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-1">Threats Found</p>
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-warning" />
+              <AlertTriangle className="w-4 h-4 text-warning" />
               <span className="text-lg font-bold font-mono text-foreground">{profile?.threats_detected ?? 0}</span>
             </div>
           </div>
@@ -89,21 +110,27 @@ const PersonalizedRisk = () => {
 
       <div>
         <p className="text-sm font-semibold text-foreground mb-3">Risk Score History (30 days)</p>
-        <ResponsiveContainer width="100%" height={180}>
-          <AreaChart data={history}>
-            <defs>
-              <linearGradient id="riskHistGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 18%)" />
-            <XAxis dataKey="date" tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} interval={4} />
-            <YAxis tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} domain={[0, 100]} />
-            <Tooltip contentStyle={{ background: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 15%, 18%)", borderRadius: "8px", color: "hsl(200, 20%, 90%)" }} />
-            <Area type="monotone" dataKey="score" stroke="hsl(175, 80%, 50%)" fill="url(#riskHistGrad)" strokeWidth={2} />
-          </AreaChart>
-        </ResponsiveContainer>
+        {history.length > 1 ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={history}>
+              <defs>
+                <linearGradient id="riskHistGradPersonal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(175, 80%, 50%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 18%)" />
+              <XAxis dataKey="date" tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} interval={Math.max(0, Math.floor(history.length / 6))} />
+              <YAxis tick={{ fill: "hsl(215, 15%, 50%)", fontSize: 10 }} domain={[0, 100]} />
+              <Tooltip contentStyle={{ background: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 15%, 18%)", borderRadius: "8px", color: "hsl(200, 20%, 90%)" }} />
+              <Area type="monotone" dataKey="score" stroke="hsl(175, 80%, 50%)" fill="url(#riskHistGradPersonal)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            Run scans to build your risk history chart
+          </div>
+        )}
       </div>
     </div>
   );
